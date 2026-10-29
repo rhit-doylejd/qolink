@@ -1,0 +1,17 @@
+# Alire / GNAT
+alire/
+obj/
+config/
+bin/
+*.ali
+*.o
+# Vivado
+*.jou
+*.log
+*.str
+.Xil/
+*.cache/
+*.runs/
+*.sim/
+*.hw/
+*.ip_user_files/
