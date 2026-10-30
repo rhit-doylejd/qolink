@@ -16,4 +16,4 @@ bin/
 *.hw/
 *.ip_user_files/
 build/
-
+clockInfo.txt
