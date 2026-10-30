@@ -15,3 +15,5 @@ bin/
 *.sim/
 *.hw/
 *.ip_user_files/
+build/
+
