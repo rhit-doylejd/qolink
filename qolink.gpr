@@ -1,0 +1,29 @@
+project Qolink is
+
+   for Target use "riscv64-elf";
+   for Runtime ("Ada") use "light-rv32im";
+
+   for Languages   use ("Ada", "Asm_Cpp");
+   for Source_Dirs use ("src/**", "apps/scratch_test");
+   for Object_Dir  use "obj";
+   for Exec_Dir use "bin";
+   for Main use ("scratch_test.adb");
+
+   Linker_Script := Project'Project_Dir & "src/neorv32/neorv32.ld";
+
+   package Compiler is
+      for Default_Switches ("Ada") use
+        ("-g", "-O1", "-gnat2022", "-gnatwa", "-gnatw.X",
+         "-ffunction-sections", "-fdata-sections");
+      for Default_Switches ("Asm_Cpp") use ("-g");
+   end Compiler;
+
+   package Linker is
+      for Default_Switches ("Ada") use
+         ("-nostartfiles",
+          "-T", Linker_Script,
+          "-Wl,--gc-sections",
+          "-Wl,-Map=" & Project'Project_Dir & "obj/scatch_test.map");
+   end Linker;
+
+end Qolink;

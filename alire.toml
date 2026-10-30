@@ -1,0 +1,9 @@
+name = "adacore_qolink"
+description = "Typed Ada driver for the QOLink FPGA-to-FPGA link"
+version = "0.1.0-dev"
+authors = ["QOLink Team"]
+maintainers = ["Joshua Doyle <doylejd@rose-hulman.edu>"]
+project-files = ["qolink.gpr"]
+
+[[depends-on]]
+gnat_riscv64_elf = "*"
