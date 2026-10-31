@@ -156,7 +156,7 @@ always @(posedge clk or posedge reset) begin
         byte_index <= 0;
         payload_index <= 0;
     end
-    else begin
+    else begin //TODO finish state machine
         case(state) //handle switching to next state and managing what needs to be done during a state
             IDLE: begin
             end
