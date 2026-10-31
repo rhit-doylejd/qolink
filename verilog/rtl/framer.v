@@ -159,6 +159,15 @@ always @(posedge clk or posedge reset) begin
     else begin //TODO finish state machine
         case(state) //handle switching to next state and managing what needs to be done during a state
             IDLE: begin
+                if(start) begin //start condition, initialize the registers and reset indices
+                    class_reg <= packet_class;
+                    length_reg <= length;
+                    sequence_reg <= sequence_count[packet_class];
+                    byte_index <= 0;
+                    payload_index <= 0;
+                    state <= PREAMBLE; //go to next state
+                end
+                //otherwise do nothing
             end
             PREAMBLE: begin
             end
