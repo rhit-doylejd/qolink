@@ -27,7 +27,6 @@ output busy,
 output reg done,
 //Preamble generated internally
 //SFD generated internally
-input sfd_sent,
 //Header
 input [1:0] packet_class,
 input [10:0] length,
@@ -48,14 +47,13 @@ input transmit_ready //transmitter ready
 localparam  IDLE = 4'd0, //states
             PREAMBLE = 4'd1,
             SFD = 4'd2,
-            WAIT_SFD = 4'd3,
-            HEADER = 4'd4,
-            SEQUENCE = 4'd5,
-            TIMESTAMP = 4'd6,
-            PAYLOAD = 4'd7,
-            CRC_CAPTURE = 4'd8, 
-            FCS = 4'd9,
-            EFD = 4'd10;
+            HEADER = 4'd3,
+            SEQUENCE = 4'd4,
+            TIMESTAMP = 4'd5,
+            PAYLOAD = 4'd6,
+            CRC_CAPTURE = 4'd7, 
+            FCS = 4'd8,
+            EFD = 4'd9;
 
 localparam  TRANSMIT_BYTE = 2'b00, //fed to the transmitter so it knows what to output
             TRANSMIT_SFD = 2'b01,
@@ -155,14 +153,17 @@ always @(posedge clk or posedge reset) begin
         fcs_reg <= 0;
         byte_index <= 0;
         payload_index <= 0;
+        for(i = 0; i < 4; i = i + 1) sequence_count[i] <= 0;
     end
     else begin //TODO finish state machine
         case(state) //handle switching to next state and managing what needs to be done during a state
             IDLE: begin
                 if(start) begin //start condition, initialize the registers and reset indices
+                    done <= 0;
                     class_reg <= packet_class;
                     length_reg <= length;
                     sequence_reg <= sequence_count[packet_class];
+                    timestamp_reg <= timestamp;
                     byte_index <= 0;
                     payload_index <= 0;
                     state <= PREAMBLE; //go to next state
@@ -170,16 +171,31 @@ always @(posedge clk or posedge reset) begin
                 //otherwise do nothing
             end
             PREAMBLE: begin
+                if(transmit_accept) state <= SFD; //move onto SFD state
             end
             SFD: begin
+                if(transmit_accept) state <= HEADER;
             end
-            WAIT_SFD: begin
-            end
-            HEADER: begin
+            HEADER: begin //switch to sequence if byte_index = 1 otherwise switch byte index from 0 to 1
+                if(transmit_accept) begin
+                    if(byte_index == 1) begin
+                        byte_index <= 0;
+                        state <= SEQUENCE;
+                    end
+                    else byte_index <= 1;
+                end
             end
             SEQUENCE: begin
+                if(transmit_accept) state <= TIMESTAMP;
             end
-            TIMESTAMP: begin
+            TIMESTAMP: begin //similar to header, but increment byte index
+                if(transmit_accept) begin
+                    if(byte_index == 7) begin
+                        byte_index <= 0;
+                        state <= PAYLOAD;
+                    end
+                    else byte_index = byte_index + 1;
+                end
             end
             PAYLOAD: begin
             end
