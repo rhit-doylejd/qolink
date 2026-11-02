@@ -18,7 +18,7 @@
 // Additional Comments:
 // 
 //////////////////////////////////////////////////////////////////////////////////
-
+//TODO MAKE TESTBENCH AND WRITE DIAGRAM FOR STATE MACHINE
 
 module framer(
 //Control Signals
@@ -155,7 +155,7 @@ always @(posedge clk or posedge reset) begin
         payload_index <= 0;
         for(i = 0; i < 4; i = i + 1) sequence_count[i] <= 0;
     end
-    else begin //TODO finish state machine
+    else begin
         case(state) //handle switching to next state and managing what needs to be done during a state
             IDLE: begin
                 if(start) begin //start condition, initialize the registers and reset indices
@@ -197,13 +197,36 @@ always @(posedge clk or posedge reset) begin
                     else byte_index = byte_index + 1;
                 end
             end
-            PAYLOAD: begin
+            PAYLOAD: begin //transmit through entire payload length, use payload_index up to length_reg
+                if(transmit_accept) begin
+                    if(payload_index == length_reg) begin
+                        payload_index <= 0;
+                        state <= CRC_CAPTURE;
+                    end
+                    else payload_index <= payload_index + 1;
+                end
             end
-            CRC_CAPTURE: begin
+            CRC_CAPTURE: begin //get crc from crc module
+                if(transmit_accept) begin
+                    fcs_reg <= crc_output;
+                    state <= FCS;
+                end
             end
-            FCS: begin
+            FCS: begin //output crc to transmitter, same as timestamp with byte_index = 3
+                if(transmit_accept) begin
+                    if(byte_index == 3) begin
+                        byte_index <= 0;
+                        state <= EFD;
+                    end
+                    else byte_index = byte_index + 1;
+                end
             end
-            EFD: begin
+            EFD: begin //increment class-respective sequence number, set done flag, go back to IDLE and wait for next packet
+                if(transmit_accept) begin
+                    sequence_count[class_reg] <= sequence_count[class_reg] + 1;
+                    done <= 1;
+                    state <= IDLE;
+                end
             end
         endcase
     end
