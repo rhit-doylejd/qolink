@@ -19,7 +19,6 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 //TODO MAKE TESTBENCH AND WRITE DIAGRAM FOR STATE MACHINE
-//TODO REMOVE TIMING CONSTRAINTS ADD FIFO TO PAYLOAD INPUT (?)
 
 module framer(
 //Control Signals
