@@ -195,12 +195,12 @@ always @(posedge clk or posedge reset) begin
                         byte_index <= 0;
                         state <= PAYLOAD;
                     end
-                    else byte_index = byte_index + 1;
+                    else byte_index <= byte_index + 1;
                 end
             end
             PAYLOAD: begin //transmit through entire payload length, use payload_index up to length_reg
                 if(transmit_accept) begin
-                    if(payload_index == length_reg) begin
+                    if(payload_index == length_reg - 1) begin
                         payload_index <= 0;
                         state <= CRC_CAPTURE;
                     end
@@ -208,10 +208,8 @@ always @(posedge clk or posedge reset) begin
                 end
             end
             CRC_CAPTURE: begin //get crc from crc module
-                if(transmit_accept) begin
-                    fcs_reg <= crc_output;
-                    state <= FCS;
-                end
+                fcs_reg <= crc_output;
+                state <= FCS;
             end
             FCS: begin //output crc to transmitter, same as timestamp with byte_index = 3
                 if(transmit_accept) begin
@@ -219,7 +217,7 @@ always @(posedge clk or posedge reset) begin
                         byte_index <= 0;
                         state <= EFD;
                     end
-                    else byte_index = byte_index + 1;
+                    else byte_index <= byte_index + 1;
                 end
             end
             EFD: begin //increment class-respective sequence number, set done flag, go back to IDLE and wait for next packet
