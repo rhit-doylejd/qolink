@@ -19,6 +19,7 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 //TODO MAKE TESTBENCH AND WRITE DIAGRAM FOR STATE MACHINE
+//TODO REMOVE TIMING CONSTRAINTS, FIX CRC_ENABLE FLAG SO CRC WORKS PROPERLY WHEN PACKET IS MADE
 
 module framer(
 //Control Signals
