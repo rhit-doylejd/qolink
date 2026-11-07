@@ -55,7 +55,8 @@ assign payload = fifo_out; //continuous payload input is fifo output
 assign payload_valid = !reset && !fifo_empty; //payload is valid as long as there's anything in the fifo
 assign fifo_read = payload_valid && payload_ready; //read from fifo (remove byte from pointer) only if it is read by framer
 
- 
+reg [63:0] test_payload;
+integer i;
 
 
 
@@ -66,6 +67,8 @@ initial begin
     clk <= 0;
     reset <= 1;
     start <= 0;
+    fifo_write <= 0;
+    fifo_input <= 0;
     @(negedge clk);
     reset <= 0;
     start <= 1;
@@ -75,10 +78,18 @@ initial begin
     packet_class <= 2'b10;
     length <= 11'h8;
     timestamp <= 64'h1F1E1D1C1B1A1918;
+    test_payload <= 64'h2F2E2D2C2B2A2928;
+    //Need to feed payload into FIFO
+    for(i = 63; i >= 7; i = i - 8) begin
+        @(negedge clk);
+        while(fifo_full) @(negedge clk); //wait in case fifo is full
+        fifo_input <= test_payload[i -: 8]; //Write a byte from test_payload into the fifo
+        fifo_write <= 1;
+        @(negedge clk); //let it write
+        fifo_write <= 0;
+    end
     @(negedge clk);
     start <= 0;
-    //Need to feed payload into FIFO
-    @(negedge clk);
     @(negedge clk);
     @(negedge clk);
     @(negedge clk);
