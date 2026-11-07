@@ -53,11 +53,7 @@ initial begin
     length <= 11'h8;
     timestamp <= 64'h1F1E1D1C1B1A1918;
     @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
+    start <= 0;
     @(negedge clk);
     @(negedge clk);
     @(negedge clk);
