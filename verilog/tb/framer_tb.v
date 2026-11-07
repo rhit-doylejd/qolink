@@ -27,7 +27,7 @@ wire done;
 reg [1:0] packet_class;
 reg [10:0] length;
 reg [63:0] timestamp;
-reg [7:0] payload;
+wire [7:0] payload;
 reg payload_valid;
 wire payload_ready;
 wire [7:0] transmit_data;
@@ -39,7 +39,8 @@ framer dut(.clk(clk), .reset(reset), .start(start), .busy(busy), .done(done),
     .packet_class(packet_class), .length(length), .timestamp(timestamp), .payload(payload), .payload_valid(payload_valid),
     .payload_ready(payload_ready), .transmit_data(transmit_data), .transmit_type(transmit_type), 
     .transmit_valid(transmit_valid), .transmit_ready(transmit_ready));
-    
+   
+//FIFO module, fill with payload bits and then send signal to FIFO from framer when ready to accept 
 reg fifo_write; 
 wire fifo_read;
 reg [7:0] fifo_input;
@@ -48,6 +49,16 @@ wire fifo_full, fifo_empty;
 
 fifo payload_fifo(.clk(clk), .reset(reset), .write(fifo_write), .read(fifo_read),
     .in(fifo_input), .out(fifo_out), .full(fifo_full), .empty(fifo_empty));
+
+//assignments to connect input/outputs
+assign payload = fifo_out;
+assign payload_valid = 
+
+
+
+
+
+
 
 initial begin
     clk <= 0;
