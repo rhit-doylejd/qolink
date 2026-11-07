@@ -28,7 +28,7 @@ reg [1:0] packet_class;
 reg [10:0] length;
 reg [63:0] timestamp;
 wire [7:0] payload;
-reg payload_valid;
+wire payload_valid;
 wire payload_ready;
 wire [7:0] transmit_data;
 wire [1:0] transmit_type;
@@ -51,9 +51,11 @@ fifo payload_fifo(.clk(clk), .reset(reset), .write(fifo_write), .read(fifo_read)
     .in(fifo_input), .out(fifo_out), .full(fifo_full), .empty(fifo_empty));
 
 //assignments to connect input/outputs
-assign payload = fifo_out;
-assign payload_valid = 
+assign payload = fifo_out; //continuous payload input is fifo output
+assign payload_valid = !reset && !fifo_empty; //payload is valid as long as there's anything in the fifo
+assign fifo_read = payload_valid && payload_ready; //read from fifo (remove byte from pointer) only if it is read by framer
 
+ 
 
 
 
