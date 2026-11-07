@@ -58,11 +58,6 @@ assign fifo_read = payload_valid && payload_ready; //read from fifo (remove byte
 reg [63:0] test_payload;
 integer i;
 
-
-
-
-
-
 initial begin
     clk <= 0;
     reset <= 1;
@@ -90,6 +85,7 @@ initial begin
     end
     @(negedge clk);
     start <= 0;
+    //just to ensure it has enough time to show all of the outputs (outputs one byte at a time) and that it doesnt start another transmission
     @(negedge clk);
     @(negedge clk);
     @(negedge clk);
