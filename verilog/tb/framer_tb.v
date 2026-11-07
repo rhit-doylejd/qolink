@@ -40,7 +40,6 @@ framer dut(.clk(clk), .reset(reset), .start(start), .busy(busy), .done(done),
     .payload_ready(payload_ready), .transmit_data(transmit_data), .transmit_type(transmit_type), 
     .transmit_valid(transmit_valid), .transmit_ready(transmit_ready));
     
-module fifo;
 reg fifo_write; 
 wire fifo_read;
 reg [7:0] fifo_input;
