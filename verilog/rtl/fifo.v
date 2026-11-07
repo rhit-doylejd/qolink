@@ -14,7 +14,7 @@
 // Dependencies: 
 // 
 // Revision:
-// Revision 0.01 - File Created
+// Revision 0.02 - Made output continuous for framer
 // Additional Comments: incrementing the limited-size pointers should function as wraparound as it takes the lower 4 bits only
 // 
 //////////////////////////////////////////////////////////////////////////////////
@@ -23,7 +23,7 @@
 module fifo(
 input clk, reset, write, read, 
 input wire [7:0] in, //write read flags to signal I/O
-output reg [7:0] out, 
+output wire [7:0] out, 
 output wire full, empty //full empty flags to signal status of FIFO
 );
 reg [7:0] data [15:0]; //data storage, 16 spaces of 1 byte each
@@ -37,13 +37,13 @@ assign read_acc = read && !empty;
 assign write_acc = write && !full;
 assign full = (count == 16);
 assign empty = (count == 0);
+assign out = data[read_ptr];
 
 always@(posedge clk or posedge reset)
     if(reset) begin //reset pointers, any garbage data stored within will be overwritten so no need to empty
         read_ptr <= 0;
         write_ptr <= 0;
         count <= 0;
-        out <= 0;
     end else begin
         case ({read_acc, write_acc}) //four cases depending on read/write enable
             2'b00: begin //Nothing happens 
@@ -55,12 +55,10 @@ always@(posedge clk or posedge reset)
                 end
             2'b10: begin //read, no write. decrement count and increment read ptr and update output from data
                 count <= count - 1'b1;
-                out <= data[read_ptr];
                 read_ptr <= read_ptr + 1'b1;
                 end
             2'b11: begin //read and write, don't change count. increment write/read ptr, update output, update data
                 data[write_ptr] <= in;
-                out <= data[read_ptr];
                 write_ptr <= write_ptr + 1'b1;
                 read_ptr <= read_ptr + 1'b1;
                 end
