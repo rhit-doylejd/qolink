@@ -23,7 +23,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 module qolink_regs_tb;
-
+    
     //--------------------------------------------------------------------------
     // Clock and reset
     //--------------------------------------------------------------------------
@@ -71,9 +71,25 @@ module qolink_regs_tb;
     localparam [1:0] RESP_ERR     = 2'd1;
     localparam [1:0] RESP_TIMEOUT = 2'd2;
 
+    //--------------------------------------------------------------------------
+    // Register addresses (must match qolink_regs.v and qolink-registers.ads)
+    //--------------------------------------------------------------------------
+    localparam [31:0] SCRATCH        = 32'hF000_0000;
+    localparam [31:0] TX_FIFO_DATA   = 32'hF000_0004;
+    localparam [31:0] TX_FIFO_STATUS = 32'hF000_0008;
+    localparam [31:0] RX_FIFO_DATA   = 32'hF000_000C;
+    localparam [31:0] RX_FIFO_STATUS = 32'hF000_0010;
+    localparam [31:0] LOOPBACK_CTRL  = 32'hF000_0014;
+
+    // FIFO status values: bit 0 = empty, bit 1 = full
+    localparam [31:0] ST_EMPTY = 32'h1;
+    localparam [31:0] ST_DATA  = 32'h0;   // neither empty nor full
+    localparam [31:0] ST_FULL  = 32'h2;
+
     reg  [1:0]  resp;       // how the module answered
     reg  [31:0] rd;         // data it returned
     integer     failures = 0;
+    integer     i;
 
     //--------------------------------------------------------------------------
     // One XBUS transfer: stb for one cycle, cyc held until ack/err.
@@ -135,8 +151,8 @@ module qolink_regs_tb;
 
     task check_pattern(input [31:0] d);
         begin
-            check_write(32'hF000_0000, d, 4'b1111);
-            check_read (32'hF000_0000, d);
+            check_write(SCRATCH, d, 4'b1111);
+            check_read (SCRATCH, d);
         end
     endtask
 
@@ -154,6 +170,32 @@ module qolink_regs_tb;
     endtask
 
     //--------------------------------------------------------------------------
+    // Loopback helpers: same register accesses the Ada driver will make
+    //--------------------------------------------------------------------------
+    task start_loopback(input [7:0] n);      // move n bytes TX -> RX (0 = cancel)
+        begin
+            check_write(LOOPBACK_CTRL, {24'h0, n}, 4'b0001);
+        end
+    endtask
+
+    task wait_loopback_idle;                 // poll busy (bit 8), give up after 100 reads
+        integer polls;
+        begin
+            polls = 0;
+            rd    = 32'h100;
+            while (rd[8] && polls < 100) begin
+                bus_transfer(LOOPBACK_CTRL, 1'b0, 32'h0, 4'hF);
+                polls = polls + 1;
+            end
+            if (rd[8]) begin
+                $display("  loopback still busy after %0d polls  FAIL (remaining %0d)",
+                         polls, rd[7:0]);
+                failures = failures + 1;
+            end
+        end
+    endtask
+
+    //--------------------------------------------------------------------------
     // Test sequence
     //--------------------------------------------------------------------------
     initial begin
@@ -163,7 +205,7 @@ module qolink_regs_tb;
         rst_n <= 1'b1;
 
         $display("Test 1: reset value");
-        check_read(32'hF000_0000, 32'h0000_0000);
+        check_read(SCRATCH, 32'h0000_0000);
 
         $display("Test 2: full-word patterns");
         check_pattern(32'hA5A5_A5A5);
@@ -174,16 +216,91 @@ module qolink_regs_tb;
         check_pattern(32'hDEAD_BEEF);
 
         $display("Test 3: byte enables (write byte 2 only)");
-        check_write(32'hF000_0000, 32'hFFFF_FFFF, 4'b1111);
-        check_write(32'hF000_0000, 32'h3C3C_3C3C, 4'b0100);
-        check_read (32'hF000_0000, 32'hFF3C_FFFF);
+        check_write(SCRATCH, 32'hFFFF_FFFF, 4'b1111);
+        check_write(SCRATCH, 32'h3C3C_3C3C, 4'b0100);
+        check_read (SCRATCH, 32'hFF3C_FFFF);
 
-        $display("Test 4: unmapped offset answers with err");
-        check_response(32'hF000_0004, 1'b0, RESP_ERR);
-        check_response(32'hF000_0004, 1'b1, RESP_ERR);
-        check_read    (32'hF000_0000, 32'hFF3C_FFFF);   // bad write changed nothing
+        $display("Test 4: TX FIFO push, status, and errors");
+        check_read    (TX_FIFO_STATUS, ST_EMPTY);             // empty after reset
+        check_response(TX_FIFO_DATA, 1'b0, RESP_ERR);         // TX_FIFO_DATA is write-only
+        check_response(TX_FIFO_STATUS, 1'b1, RESP_ERR);       // TX_FIFO_STATUS is read-only
+        bus_transfer  (TX_FIFO_DATA, 1'b1, 32'hFF, 4'b0010);  // byte 0 not selected
+        if (resp != RESP_ERR) begin
+            $display("  write without byte 0  FAIL (response %0d)", resp);
+            failures = failures + 1;
+        end
+        check_read    (TX_FIFO_STATUS, ST_EMPTY);             // ...and nothing was pushed
+        check_write   (TX_FIFO_DATA, 32'hA0, 4'b0001);
+        check_read    (TX_FIFO_STATUS, ST_DATA);              // one byte: not empty, not full
+        for (i = 1; i < 16; i = i + 1)
+            check_write(TX_FIFO_DATA, 32'hA0 + i, 4'b0001);  // A1..AF: 16 bytes total
+        check_read    (TX_FIFO_STATUS, ST_FULL);
+        check_response(TX_FIFO_DATA, 1'b1, RESP_ERR);         // 17th write rejected
 
-        $display("Test 5: address outside the window gets no answer");
+        $display("Test 5: loopback moves all 16 bytes, in order");
+        check_read    (RX_FIFO_STATUS, ST_EMPTY);
+        check_response(RX_FIFO_DATA, 1'b0, RESP_ERR);         // reading empty RX is an error
+        check_response(RX_FIFO_DATA, 1'b1, RESP_ERR);         // RX_FIFO_DATA is read-only
+        start_loopback(16);
+        wait_loopback_idle;
+        check_read    (LOOPBACK_CTRL,  32'h000);              // idle, 0 remaining
+        check_read    (TX_FIFO_STATUS, ST_EMPTY);
+        check_read    (RX_FIFO_STATUS, ST_FULL);
+        for (i = 0; i < 16; i = i + 1)
+            check_read(RX_FIFO_DATA, 32'hA0 + i);             // A0..AF, first in first out
+        check_read    (RX_FIFO_STATUS, ST_EMPTY);
+        check_response(RX_FIFO_DATA, 1'b0, RESP_ERR);
+
+        $display("Test 6: loopback moves exactly the requested count");
+        for (i = 0; i < 5; i = i + 1)
+            check_write(TX_FIFO_DATA, 32'hB0 + i, 4'b0001);  // B0..B4
+        start_loopback(3);
+        wait_loopback_idle;
+        check_read    (RX_FIFO_DATA, 32'hB0);
+        check_read    (RX_FIFO_DATA, 32'hB1);
+        check_read    (RX_FIFO_DATA, 32'hB2);
+        check_read    (RX_FIFO_STATUS, ST_EMPTY);             // exactly 3 moved
+        check_read    (TX_FIFO_STATUS, ST_DATA);              // B3, B4 still in TX
+
+        $display("Test 7: loopback pauses when TX runs dry, resumes on new data");
+        start_loopback(4);                                    // only B3, B4 available
+        repeat (20) @(posedge clk);
+        check_read    (LOOPBACK_CTRL, 32'h102);               // busy, 2 remaining
+        check_write   (TX_FIFO_DATA, 32'hC0, 4'b0001);
+        check_write   (TX_FIFO_DATA, 32'hC1, 4'b0001);
+        wait_loopback_idle;
+        check_read    (RX_FIFO_DATA, 32'hB3);
+        check_read    (RX_FIFO_DATA, 32'hB4);
+        check_read    (RX_FIFO_DATA, 32'hC0);
+        check_read    (RX_FIFO_DATA, 32'hC1);
+        check_read    (RX_FIFO_STATUS, ST_EMPTY);
+
+        $display("Test 8: loopback pauses when RX is full; cancel stops it");
+        for (i = 0; i < 16; i = i + 1)
+            check_write(TX_FIFO_DATA, 32'hD0 + i, 4'b0001);  // D0..DF
+        start_loopback(16);
+        wait_loopback_idle;
+        check_read    (RX_FIFO_STATUS, ST_FULL);
+        check_write   (TX_FIFO_DATA, 32'hE0, 4'b0001);
+        start_loopback(1);                                    // RX full: must stall
+        repeat (20) @(posedge clk);
+        check_read    (LOOPBACK_CTRL, 32'h101);               // busy, nothing popped
+        check_read    (TX_FIFO_STATUS, ST_DATA);              // E0 still in TX
+        start_loopback(0);                                    // cancel
+        check_read    (LOOPBACK_CTRL, 32'h000);
+        for (i = 0; i < 16; i = i + 1)
+            check_read(RX_FIFO_DATA, 32'hD0 + i);             // D0..DF, nothing lost
+        repeat (20) @(posedge clk);                           // RX has room now...
+        check_read    (RX_FIFO_STATUS, ST_EMPTY);             // ...but cancelled: E0 not moved
+        check_read    (TX_FIFO_STATUS, ST_DATA);
+
+
+        $display("Test 9: unmapped offset answers with err");
+        check_response(32'hF000_0100, 1'b0, RESP_ERR);
+        check_response(32'hF000_0100, 1'b1, RESP_ERR);  
+        check_read    (SCRATCH, 32'hFF3C_FFFF);   // bad write changed nothing
+
+        $display("Test 10: address outside the window gets no answer");
         check_response(32'h1000_0000, 1'b0, RESP_TIMEOUT);
 
         if (failures == 0)
