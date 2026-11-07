@@ -54,19 +54,6 @@ initial begin
     timestamp <= 64'h1F1E1D1C1B1A1918;
     @(negedge clk);
     start <= 0;
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
     //Need to assign payload bytes one at a time:
     payload <= 8'h2F;
     payload_valid <= 1;
