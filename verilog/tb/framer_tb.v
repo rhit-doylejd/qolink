@@ -18,7 +18,7 @@
 // Additional Comments:
 // 
 //////////////////////////////////////////////////////////////////////////////////
-//Sample packet test
+//Sample packet test using FIFO to feed payload bits
 
 module framer_tb; //reg/wires taken from framer module
 reg clk, reset, start;
@@ -39,6 +39,17 @@ framer dut(.clk(clk), .reset(reset), .start(start), .busy(busy), .done(done),
     .packet_class(packet_class), .length(length), .timestamp(timestamp), .payload(payload), .payload_valid(payload_valid),
     .payload_ready(payload_ready), .transmit_data(transmit_data), .transmit_type(transmit_type), 
     .transmit_valid(transmit_valid), .transmit_ready(transmit_ready));
+    
+module fifo;
+reg fifo_write; 
+wire fifo_read;
+reg [7:0] fifo_input;
+wire [7:0] fifo_out;
+wire fifo_full, fifo_empty;
+
+fifo payload_fifo(.clk(clk), .reset(reset), .write(fifo_write), .read(fifo_read),
+    .in(fifo_input), .out(fifo_out), .full(fifo_full), .empty(fifo_empty));
+
 initial begin
     clk <= 0;
     reset <= 1;
@@ -54,33 +65,7 @@ initial begin
     timestamp <= 64'h1F1E1D1C1B1A1918;
     @(negedge clk);
     start <= 0;
-    //Need to assign payload bytes one at a time:
-    payload <= 8'h2F;
-    payload_valid <= 1;
-    @(negedge clk);
-    payload <= 8'h2E;
-    payload_valid <= 1;
-    @(negedge clk);
-    payload <= 8'h2D;
-    payload_valid <= 1;
-    @(negedge clk);
-    payload <= 8'h2C;
-    payload_valid <= 1;
-    @(negedge clk);
-    payload <= 8'h2B;
-    payload_valid <= 1;
-    @(negedge clk);
-    payload <= 8'h2A;
-    payload_valid <= 1;
-    @(negedge clk);
-    payload <= 8'h29;
-    payload_valid <= 1;
-    @(negedge clk);
-    payload <= 8'h28;
-    payload_valid <= 1;
-    @(negedge clk);
-    @(negedge clk);
-    payload_valid <= 0;
+    //Need to feed payload into FIFO
     @(negedge clk);
     @(negedge clk);
     @(negedge clk);
