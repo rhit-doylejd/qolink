@@ -21,6 +21,17 @@
 
 
 module deframer(
-
+//Control Signals
+input clk, reset,
+output busy, 
+output reg done, error, //error is new, from CRC check
+output reg [1:0] packet_class, //Matched to framer
+output reg [10:0] length,
+output reg [63:0] timestamp,
+output [7:0] payload,
+output payload_valid,
+input payload_ready,
+input [7:0] receive_data,
+input [1:0] receive_type,
     );
 endmodule

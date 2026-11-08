@@ -74,6 +74,8 @@ initial begin
     length <= 11'h8;
     timestamp <= 64'h1F1E1D1C1B1A1918;
     test_payload <= 64'h2F2E2D2C2B2A2928;
+    @(negedge clk);
+    start <= 0;
     //Need to feed payload into FIFO
     for(i = 63; i >= 7; i = i - 8) begin
         @(negedge clk);
@@ -83,20 +85,8 @@ initial begin
         @(negedge clk); //let it write
         fifo_write <= 0;
     end
-    @(negedge clk);
-    start <= 0;
     //just to ensure it has enough time to show all of the outputs (outputs one byte at a time) and that it doesnt start another transmission
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
-    @(negedge clk);
+    wait(done);
     @(negedge clk);
     $finish;
 end
