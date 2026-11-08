@@ -32,7 +32,7 @@ input [1:0] packet_class,
 input [10:0] length,
 //Sequence generated internally
 //Timestamp
-input [63:0] timestamp,
+input [47:0] timestamp,
 //Payload
 input [7:0] payload,
 input payload_valid,
@@ -64,7 +64,7 @@ reg [1:0] class_reg;
 reg [10:0] length_reg;
 reg [7:0] sequence_reg; //sequence number for current frame
 reg [7:0] sequence_count [0:3]; //sequence count for each class passed to sequence reg
-reg [63:0] timestamp_reg;
+reg [47:0] timestamp_reg;
 reg [31:0] fcs_reg;
 reg [2:0] byte_index; //byte within non-payload field
 reg [10:0] payload_index; //byte within payload field
@@ -121,7 +121,7 @@ always @(*) begin
             transmit_valid = 1;
         end
         TIMESTAMP: begin
-            transmit_data = timestamp_reg[63 - 8 * byte_index -: 8]; //selects 8 bits at a time using byte index as a reference
+            transmit_data = timestamp_reg[47 - 8 * byte_index -: 8]; //selects 8 bits at a time using byte index as a reference
             transmit_type = TRANSMIT_BYTE;
             transmit_valid = 1;
         end
@@ -190,7 +190,7 @@ always @(posedge clk or posedge reset) begin
             end
             TIMESTAMP: begin //similar to header, but increment byte index
                 if(transmit_accept) begin
-                    if(byte_index == 7) begin
+                    if(byte_index == 5) begin
                         byte_index <= 0;
                         state <= PAYLOAD;
                     end
