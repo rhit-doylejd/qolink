@@ -72,7 +72,7 @@ initial begin
     // timestamp: Hex 0x1F1E1D1C1B1A1918, payload: Hex 0x2F2E2D2C2B2A2928
     packet_class <= 2'b10;
     length <= 11'h8;
-    timestamp <= 64'h1F1E1D1C1B1A1918;
+    timestamp <= 64'h1F1E1D1C1B1A;
     test_payload <= 64'h2F2E2D2C2B2A2928;
     @(negedge clk);
     start <= 0;
