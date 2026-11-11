@@ -20,7 +20,16 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module timestamp_tb(
-
-    );
+module timestamp_tb;
+reg clk, reset, queued_req, frame_req;
+wire [47:0] queued_timestamp, frame_timestamp;
+timestamp dut(.clk(clk), .reset(reset), .queued_req(queued_req), .frame_req(frame_req),
+    .queued_timestamp(queued_timestamp), .frame_timestamp(frame_timestamp));
+initial begin
+    clk <= 0;
+    reset <= 0;
+    
+    
+end
+always #5 clk = ~clk;
 endmodule
