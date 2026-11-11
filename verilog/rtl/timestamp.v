@@ -19,8 +19,8 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-
-module timestamp(
+//counts in instances of 10ns assuming 100 MHz clock
+module timestamp( 
 input clk, reset, queued_req, frame_req, //two input requests, two outputs
 output reg [47:0] queued_timestamp, frame_timestamp //queued is for frames as they enter FIFO, current is for frames in framer
     );
@@ -32,7 +32,7 @@ always @(posedge clk or posedge reset) begin
         frame_timestamp <= 0;
     end
     else begin 
-        counter <= counter + 10;
+        counter <= counter + 1;
         if(queued_req) queued_timestamp <= counter;
         if(frame_req) frame_timestamp <= counter;
     end

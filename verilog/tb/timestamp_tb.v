@@ -25,11 +25,23 @@ reg clk, reset, queued_req, frame_req;
 wire [47:0] queued_timestamp, frame_timestamp;
 timestamp dut(.clk(clk), .reset(reset), .queued_req(queued_req), .frame_req(frame_req),
     .queued_timestamp(queued_timestamp), .frame_timestamp(frame_timestamp));
+
 initial begin
-    clk <= 0;
-    reset <= 0;
-    
-    
+    clk = 0;
+    reset = 1;
+    queued_req = 0;
+    frame_req = 0;
+    @(negedge clk);
+    reset = 0;
+    #201;
+    queued_req = 1;
+    @(negedge clk);
+    queued_req = 0;
+    #401;
+    frame_req = 1;
+    @(negedge clk);
+    frame_req = 0;
+    $finish;
 end
 always #5 clk = ~clk;
 endmodule
