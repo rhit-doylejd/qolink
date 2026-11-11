@@ -14,19 +14,21 @@
 // Dependencies: 
 // 
 // Revision:
-// Revision 0.02 - Made output continuous for framer
+// Revision 0.03 - made storage space variable with a parameter
 // Additional Comments: incrementing the limited-size pointers should function as wraparound as it takes the lower 4 bits only
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module fifo(
+module fifo #(
+parameter WIDTH = 8
+)(
 input clk, reset, write, read, 
-input wire [7:0] in, //write read flags to signal I/O
-output wire [7:0] out, 
+input wire [WIDTH - 1:0] in, //write read flags to signal I/O
+output wire [WIDTH - 1:0] out, 
 output wire full, empty //full empty flags to signal status of FIFO
 );
-reg [7:0] data [15:0]; //data storage, 16 spaces of 1 byte each
+reg [WIDTH - 1:0] data [15:0]; //data storage, 16 spaces of 1 byte each
 reg [3:0] read_ptr; //read address within data
 reg [3:0] write_ptr; //write address within data
 reg [4:0] count;
