@@ -56,8 +56,11 @@ reg [31:0] fcs_reg; //give to CRC module to check
 //indices
 reg [1:0] byte_index; //byte within non-payload field
 reg [4:0] payload_index; //byte within payload field
-wire receive_acc; //handshake wires
-wire payload_acc;
+
+//handshake wires
+wire receive_accept;
+wire packet_accept;
+
 //connects to the CRC module
 wire crc_reset;
 wire crc_enable;
@@ -68,6 +71,8 @@ wire [31:0] crc_output;
 assign busy = (state != IDLE);
 assign receive_ready = !reset && ((state == IDLE) || (state == TIMESTAMP) || (state == PAYLOAD) || (state == FCS)); //states that accept input bytes
 assign receive_accept = receive_valid && receive_ready;
+assign packet_valid = !reset && (state == OUTPUT); //packet ready to send
+assign packet_accept = packet_valid && packet_ready; //packet transfers when both sides ready
 assign crc_reset = reset || (state == IDLE); //reset crc module between frames
 assign crc_data = (state == HEADER) ? header_reg : receive_data; //if state is header feed header register to crc module
 assign crc_enable = !reset && ((state == HEADER) || (receive_accept && ((state == TIMESTAMP) || (state == PAYLOAD))));
@@ -133,7 +138,8 @@ always @(posedge clk or posedge reset) begin
             end
             
             PAYLOAD: begin //transmit through entire payload length, use payload_index up to 32 bytes
-                if(transmit_accept) begin
+                if(receive_accept) begin
+                    payload[255 - 8 * payload_index -: 8] <= receive_data;
                     if(payload_index == 31) begin
                         payload_index <= 0;
                         state <= FCS;
@@ -141,20 +147,28 @@ always @(posedge clk or posedge reset) begin
                     else payload_index <= payload_index + 1;
                 end
             end
-            FCS: begin //output crc to transmitter, same as timestamp with byte_index = 3
-                if(transmit_accept) begin
+            FCS: begin //receive and store the 4 byte FCS
+                if(receive_accept) begin
+                    fcs_reg[31 - 8 * byte_index -: 8] <= receive_data;
                     if(byte_index == 3) begin
                         byte_index <= 0;
-                        sequence_count[class_reg] <= sequence_count[class_reg] + 1;
-                        done <= 1;
-                        state <= IDLE;
+                        state <= CRC_CHECK;
                     end
                     else byte_index <= byte_index + 1;
                 end
             end
-            CRC_CHECK: begin
+            CRC_CHECK: begin //compare stored FCS to received FCS and output either error or go to output state
+                if(fcs_reg == crc_output) state <= OUTPUT; //if it passes CRC send to driver
+                else begin
+                    error <= 1;
+                    state <= IDLE;
+                end
             end
             OUTPUT: begin
+                if(packet_accept) begin //hold packet until it's ready to send
+                    done <= 1;
+                    state <= IDLE;
+                end
             end
         endcase
     end
