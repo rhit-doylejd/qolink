@@ -86,7 +86,6 @@ crc32_byte crc_module(
     .out(crc_output)
 );
 
-//TODO FINISH STATES
 always @(posedge clk or posedge reset) begin
     if(reset) begin //clear all registers, set state to IDLE, set done to 0, set all indices to 0
         state <= IDLE;
